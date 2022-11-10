@@ -1,0 +1,231 @@
+version: "3.5"
+
+services:
+  kraft-node1:
+    image: confluentinc/cp-kafka:7.3.0
+    hostname: ${NODE1}
+    user: root
+    restart: always
+    container_name: kraft-node1
+    ports:
+      - "19095:19095"
+    extra_hosts:
+      - ${KAFKA_EXTRA_NODE1}
+    environment:
+      KAFKA_HEAP_OPTS: ${KAFKA_HEAP_OPTS}
+      KAFKA_LISTENERS: BROKER://${NODE1}:9092,CONTROLLER://${NODE1}:9093,SASL_SSL://${NODE1}:19095
+      KAFKA_ADVERTISED_LISTENERS: BROKER://${NODE1}:9092,SASL_SSL://${NODE1}:19095
+      KAFKA_SECURITY_INTER_BROKER_PROTOCOL: SASL_SSL
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,BROKER:PLAINTEXT,SASL_SSL:SASL_SSL
+      # KRaft quorum settings
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_PROCESS_ROLES: 'controller,broker'
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@${NODE1}:9093,2@${NODE2}:9093,3@${NODE3}:9093'
+      # Kafka additional options
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_RETENTION_MS: 10000
+      KAFKA_REPLICA_FETCH_WAIT_MAX_MS: 1000
+      KAFKA_REPLICA_FETCH_MIN_BYTES: 1384
+      KAFKA_GROUP_MAX_SESSION_TIMEOUT_MS: 100000
+      KAFKA_LOG_SEGMENT_BYTES: 107374182
+      KAFKA_COMPRESSION_TYPE: uncompressed
+      # SSL Authentication
+      KAFKA_SSL_SECRETS_DIR: /etc/kafka/secrets
+      KAFKA_SSL_KEYSTORE_FILENAME: ${KAFKA_KEYSTORE_NODE1}
+      KAFKA_SSL_KEYSTORE_CREDENTIALS: creds.file
+      KAFKA_SSL_KEY_CREDENTIALS: creds.file
+      KAFKA_SSL_TRUSTSTORE_FILENAME: ${KAFKA_TRUSTSTORE_NODE1}
+      KAFKA_SSL_TRUSTSTORE_CREDENTIALS: creds.file
+      KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: "HTTPS"
+      KAFKA_SSL_CLIENT_AUTH: requested
+      # SASL Authentication
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: GSSAPI
+      KAFKA_SASL_ENABLED_MECHANISMS: GSSAPI
+      KAFKA_SASL_KERBEROS_SERVICE_NAME: ${SERVICENAME}
+      KAFKA_SUPER_USERS: User:admin;User:kafka
+      KAFKA_OPTS: -Djava.security.auth.login.config=/krbrs/broker.sasl.jaas.config
+        -Djava.security.krb5.conf=/etc/krb5.conf
+        -Dsun.security.krb5.debug=true
+        -Dsun.net.spi.nameservice.provider.1=dns,sun
+      # Kafka logs severity
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
+      KAFKA_TOOLS_LOG4J_LOGLEVEL: ERROR
+      # Prometheus metrics additions 
+      EXTRA_ARGS:
+        -javaagent:/jmx/jmx_prometheus_javaagent-0.17.0.jar=17081:/jmx/broker.yml
+        -Djava.util.logging.config.file=/jmx/exporter_debug_logging.properties
+    volumes:
+      - ${KRBRS_DIR}:/krbrs
+      - ${JMX_EXPORTER_DIR}:/jmx
+      - ${KAFKA_SECRETS_DIR}:/etc/kafka/secrets
+      - ${BRKR_DATA}:/var/lib/kafka/data
+      - ./update/update_to_kraft.sh:/tmp/update_to_kraft.sh
+      - ./clusterID:/tmp/clusterID
+      - ${KRBRS_CONF}:/etc/krb5.conf:ro
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
+    command: "bash -c '/tmp/update_to_kraft.sh && /etc/confluent/docker/run'"
+    networks:
+      kafka:
+        ipv4_address: 10.1.0.2
+
+kraft-node2:
+    image: confluentinc/cp-kafka:7.3.0
+    hostname: ${NODE2}
+    user: root
+    restart: always
+    container_name: kraft-node2
+    ports:
+      - "19095:19095"
+    extra_hosts:
+      - ${KAFKA_EXTRA_NODE2}
+    environment:
+      KAFKA_HEAP_OPTS: ${KAFKA_HEAP_OPTS}
+      KAFKA_LISTENERS: BROKER://${NODE2}:9092,CONTROLLER://${NODE2}:9093,SASL_SSL://${NODE2}:19095
+      KAFKA_ADVERTISED_LISTENERS: BROKER://${NODE2}:9092,SASL_SSL://${NODE2}:19095
+      KAFKA_SECURITY_INTER_BROKER_PROTOCOL: SASL_SSL
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,BROKER:PLAINTEXT,SASL_SSL:SASL_SSL
+      # KRaft quorum settings
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_PROCESS_ROLES: 'controller,broker'
+      KAFKA_NODE_ID: 2
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@${NODE1}:9093,2@${NODE2}:9093,3@${NODE3}:9093'
+      # Kafka additional options
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_RETENTION_MS: 10000
+      KAFKA_REPLICA_FETCH_WAIT_MAX_MS: 1000
+      KAFKA_REPLICA_FETCH_MIN_BYTES: 1384
+      KAFKA_GROUP_MAX_SESSION_TIMEOUT_MS: 100000
+      KAFKA_LOG_SEGMENT_BYTES: 107374182
+      KAFKA_COMPRESSION_TYPE: uncompressed
+      # SSL Authentication
+      KAFKA_SSL_SECRETS_DIR: /etc/kafka/secrets
+      KAFKA_SSL_KEYSTORE_FILENAME: ${KAFKA_KEYSTORE_NODE2}
+      KAFKA_SSL_KEYSTORE_CREDENTIALS: creds.file
+      KAFKA_SSL_KEY_CREDENTIALS: creds.file
+      KAFKA_SSL_TRUSTSTORE_FILENAME: ${KAFKA_TRUSTSTORE_NODE2}
+      KAFKA_SSL_TRUSTSTORE_CREDENTIALS: creds.file
+      KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: "HTTPS"
+      KAFKA_SSL_CLIENT_AUTH: requested
+      # SASL Authentication
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: GSSAPI
+      KAFKA_SASL_ENABLED_MECHANISMS: GSSAPI
+      KAFKA_SASL_KERBEROS_SERVICE_NAME: ${SERVICENAME}
+      KAFKA_SUPER_USERS: User:admin;User:kafka
+      KAFKA_OPTS: -Djava.security.auth.login.config=/krbrs/broker.sasl.jaas.config
+        -Djava.security.krb5.conf=/etc/krb5.conf
+        -Dsun.security.krb5.debug=true
+        -Dsun.net.spi.nameservice.provider.1=dns,sun
+      # Kafka logs severity
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
+      KAFKA_TOOLS_LOG4J_LOGLEVEL: ERROR
+      # Prometheus metrics additions 
+      EXTRA_ARGS:
+        -javaagent:/jmx/jmx_prometheus_javaagent-0.17.0.jar=17081:/jmx/broker.yml
+        -Djava.util.logging.config.file=/jmx/exporter_debug_logging.properties
+    volumes:
+      - ${KRBRS_DIR}:/krbrs
+      - ${JMX_EXPORTER_DIR}:/jmx
+      - ${KAFKA_SECRETS_DIR}:/etc/kafka/secrets
+      - ${BRKR_DATA}:/var/lib/kafka/data
+      - ./update/update_to_kraft.sh:/tmp/update_to_kraft.sh
+      - ./clusterID:/tmp/clusterID
+      - ${KRBRS_CONF}:/etc/krb5.conf:ro
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
+    command: "bash -c '/tmp/update_to_kraft.sh && /etc/confluent/docker/run'"
+    networks:
+      kafka:
+        ipv4_address: 10.1.0.3
+
+kraft-node3:
+    image: confluentinc/cp-kafka:7.3.0
+    hostname: ${NODE3}
+    user: root
+    restart: always
+    container_name: kraft-node3
+    ports:
+      - "19095:19095"
+    extra_hosts:
+      - ${KAFKA_EXTRA_NODE3}
+    environment:
+      KAFKA_HEAP_OPTS: ${KAFKA_HEAP_OPTS}
+      KAFKA_LISTENERS: BROKER://${NODE3}:9092,CONTROLLER://${NODE3}:9093,SASL_SSL://${NODE3}:19095
+      KAFKA_ADVERTISED_LISTENERS: BROKER://${NODE3}:9092,SASL_SSL://${NODE3}:19095
+      KAFKA_SECURITY_INTER_BROKER_PROTOCOL: SASL_SSL
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,BROKER:PLAINTEXT,SASL_SSL:SASL_SSL
+      # KRaft quorum settings
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_PROCESS_ROLES: 'controller,broker'
+      KAFKA_NODE_ID: 3
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@${NODE1}:9093,2@${NODE2}:9093,3@${NODE3}:9093'
+      # Kafka additional options
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_RETENTION_MS: 10000
+      KAFKA_REPLICA_FETCH_WAIT_MAX_MS: 1000
+      KAFKA_REPLICA_FETCH_MIN_BYTES: 1384
+      KAFKA_GROUP_MAX_SESSION_TIMEOUT_MS: 100000
+      KAFKA_LOG_SEGMENT_BYTES: 107374182
+      KAFKA_COMPRESSION_TYPE: uncompressed
+      # SSL Authentication
+      KAFKA_SSL_SECRETS_DIR: /etc/kafka/secrets
+      KAFKA_SSL_KEYSTORE_FILENAME: ${KAFKA_KEYSTORE_NODE3}
+      KAFKA_SSL_KEYSTORE_CREDENTIALS: creds.file
+      KAFKA_SSL_KEY_CREDENTIALS: creds.file
+      KAFKA_SSL_TRUSTSTORE_FILENAME: ${KAFKA_TRUSTSTORE_NODE3}
+      KAFKA_SSL_TRUSTSTORE_CREDENTIALS: creds.file
+      KAFKA_SSL_ENDPOINT_IDENTIFICATION_ALGORITHM: "HTTPS"
+      KAFKA_SSL_CLIENT_AUTH: requested
+      # SASL Authentication
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: GSSAPI
+      KAFKA_SASL_ENABLED_MECHANISMS: GSSAPI
+      KAFKA_SASL_KERBEROS_SERVICE_NAME: ${SERVICENAME}
+      KAFKA_SUPER_USERS: User:admin;User:kafka
+      KAFKA_OPTS: -Djava.security.auth.login.config=/krbrs/broker.sasl.jaas.config
+        -Djava.security.krb5.conf=/etc/krb5.conf
+        -Dsun.security.krb5.debug=true
+        -Dsun.net.spi.nameservice.provider.1=dns,sun
+      # Kafka logs severity
+      KAFKA_LOG4J_ROOT_LOGLEVEL: WARN
+      KAFKA_TOOLS_LOG4J_LOGLEVEL: ERROR
+      # Prometheus metrics additions 
+      EXTRA_ARGS:
+        -javaagent:/jmx/jmx_prometheus_javaagent-0.17.0.jar=17081:/jmx/broker.yml
+        -Djava.util.logging.config.file=/jmx/exporter_debug_logging.properties
+    volumes:
+      - ${KRBRS_DIR}:/krbrs
+      - ${JMX_EXPORTER_DIR}:/jmx
+      - ${KAFKA_SECRETS_DIR}:/etc/kafka/secrets
+      - ${BRKR_DATA}:/var/lib/kafka/data
+      - ./update/update_to_kraft.sh:/tmp/update_to_kraft.sh
+      - ./clusterID:/tmp/clusterID
+      - ${KRBRS_CONF}:/etc/krb5.conf:ro
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
+    command: "bash -c '/tmp/update_to_kraft.sh && /etc/confluent/docker/run'"
+    networks:
+      kafka:
+        ipv4_address: 10.1.0.4
+
+networks:
+  kafka:
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 10.1.0.1/24
